@@ -1,0 +1,31 @@
+[project]
+name = "mlfont"
+version = "0.1"
+description = "Morning Light Font is an experimental generated font with machine learning."
+dependencies = [
+    "numpy",
+    "lightning",
+    "jsonargparse[signatures]>=4.17.0",
+    "hydra-core",
+    "torch",
+    "torchvision",
+    "omegaconf",
+    "scikit-learn",
+]
+
+[project.optional-dependencies]
+dev = [
+    "ruff",
+]
+
+[build-system]
+requires = ["flit_core<4"]
+build-backend = "flit_core.buildapi"
+
+[tool.ruff]
+target-version = "py312"
+include = ["mlfont/*.py"]
+line-length = 88
+
+[tool.ruff.lint.pydocstyle]
+convention = "pep257"

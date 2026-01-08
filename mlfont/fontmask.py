@@ -628,7 +628,7 @@ class FontMaskModel(L.LightningModule):
 
     def __init__(
         self,
-        hidden_dim: int = 256,
+        hidden_dim: int = 512,
         num_layers: int = 6,
         num_heads: int = 8,
         max_sequence_length: int = 256,
@@ -803,7 +803,7 @@ class FontMaskModel(L.LightningModule):
             self.valid_pixel_acc(pixel_preds[not_mask], pixel_label[not_mask])
             self.log("valid_acc", self.valid_acc, on_step=False, on_epoch=True)
             self.log(
-                "train_pixel_acc", self.valid_pixel_acc, on_step=False, on_epoch=True
+                "valid_pixel_acc", self.valid_pixel_acc, on_step=False, on_epoch=True
             )
 
     def compute_loss(
@@ -1011,8 +1011,9 @@ class FontMaskModel(L.LightningModule):
                 src_image = src_images[idx][0]
                 src_type = src_types[idx][0]
                 _, bbw, bbh = self.input_specs[src_type]
-                w = (bbw + 2) // 3 * 3
-                h = (bbh + 2) // 3 * 3
+                kernel = self.tokenizer.kernel
+                w = (bbw + kernel[1] - 1) // kernel[1] * kernel[1]
+                h = (bbh + kernel[0] - 1) // kernel[0] * kernel[0]
                 assert src_image.shape == (h, w), [src_image.shape, h, w, src_type]
                 src_image = src_image[:bbh, :bbw]
                 draw_image(src_image, idx, 0)

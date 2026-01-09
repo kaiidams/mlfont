@@ -51,7 +51,6 @@ X11_BDF_V2_INPUT_SPECS = [
     ("-Misc-Fixed-Medium-R-Normal--15-140-75-75-C-90-ISO10646-1", 9, 15),
     ("-Misc-Fixed-Medium-R-Normal--18-120-100-100-C-90-ISO10646-1", 9, 18),
     ("-Misc-Fixed-Medium-R-Normal--20-200-75-75-C-100-ISO10646-1", 10, 20),
-    ("-Shinonome-Gothic-Medium-R-Normal--16-150-75-75-C-80-ISO8859-1", 8, 16),
 ]
 
 MORNING_LIGHT_BDF_V2_INPUT_SPECS = [
@@ -320,6 +319,7 @@ class FontMaskDataModule(L.LightningDataModule):
         val_repeat: int | None = None,
         batch_size: int = 256,
         data_type: str = "x11_bdf",
+        kernel: tuple[int, int] = (3, 3),
         predict_target: str | None = None,
         src_resize_prob: float = 0.2,
         src_drop_prob: float = 0.2,
@@ -347,7 +347,7 @@ class FontMaskDataModule(L.LightningDataModule):
         self.input_specs = _get_input_spec(data_type)
         self.max_width = max(bbw for _, bbw, _ in self.input_specs)
         self.max_height = max(bbh for _, _, bbh in self.input_specs)
-        self.tokenizer = FontMaskTokenizer()
+        self.tokenizer = FontMaskTokenizer(kernel=kernel)
         self.max_src_length, self.max_tgt_length = self._compute_max_sequence_length()
         self.prop_map = {
             prop_id: prop_idx
@@ -375,11 +375,13 @@ class FontMaskDataModule(L.LightningDataModule):
                 download=self.download,
             )
         elif self.data_type == "x11_bdf":
+            all_fonts = {prop_id for prop_id, _, _ in self.input_specs}
             dataset = X11BDFFontDataset(
                 self.data_root,
                 download=self.download,
                 no_cjk_wide=True,
                 no_cjk_unicode=True,
+                font_filter=lambda font: font.font in all_fonts,
                 subsets={
                     "font-misc-misc-1.1.2.tar.bz2",
                 },
@@ -637,6 +639,7 @@ class FontMaskModel(L.LightningModule):
         num_timesteps: int = 200,
         timestep_skip: int = 1,
         data_type: str = "x11_bdf",
+        kernel: tuple[int, int] = (3, 3),
         lr: float = 1e-4,
     ) -> None:
         super().__init__()
@@ -649,7 +652,7 @@ class FontMaskModel(L.LightningModule):
         self.input_specs = _get_input_spec(data_type=data_type)
         self.max_width = max(bbw for _, bbw, _ in self.input_specs)
         self.max_height = max(bbh for _, _, bbh in self.input_specs)
-        self.tokenizer = FontMaskTokenizer()
+        self.tokenizer = FontMaskTokenizer(kernel=kernel)
         self.max_sequence_length = max_sequence_length
 
         self.xpos_embedding = nn.Embedding(
@@ -1035,6 +1038,7 @@ def cli_main():
     class FontMaskLightningCLI(LightningCLI):
         def add_arguments_to_parser(self, parser):
             parser.link_arguments("data.data_type", "model.data_type")
+            parser.link_arguments("data.kernel", "model.kernel")
 
     cli = FontMaskLightningCLI(  # noqa: F841
         FontMaskModel,

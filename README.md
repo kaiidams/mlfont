@@ -24,11 +24,11 @@ The original X11 8x13 glyphs.
 
 ### Generate font with FontMaskModel.
 
-Download the model file and save it as `fontmask-20260107.ckpt`.
+Download the model file and save it as `fontmask-20260109.ckpt`.
 
 ```sh
 python -m mlfont.cli predict \
-    --ckpt_path fontmask-20260107.ckpt \
+    --ckpt_path fontmask-20260109.ckpt \
     --output ml8x16.txt
 ```
 

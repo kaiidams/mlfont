@@ -146,10 +146,10 @@ class Main:
         for cp in range(256):
             if 0x80 <= cp < 0xa1 or 0xe0 <= cp < 0x100:
                 continue
-            if 0x00 <= cp < 0x80 and cp != 0x7e:
+            if 0x00 <= cp < 0x80 and cp != 0x7e:  # 0x7E Backslash
                 continue
             if cp == 0x7e:
-                ch = chr(0x203e)
+                ch = chr(0x203e)  # U+203E Overline
             else:
                 ch = bytes([cp]).decode("Windows-31J")
             M[cp] = ch

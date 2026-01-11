@@ -2,6 +2,7 @@
 # See LICENSE in the project root for license information.
 
 import logging
+import os
 import random
 from typing import cast
 
@@ -67,7 +68,9 @@ MORNING_LIGHT_BDF_V2_INPUT_SPECS = [
     ("-Misc-Fixed-Medium-R-Normal--15-140-75-75-C-90-ISO10646-1", 9, 15),
     ("-Misc-Fixed-Medium-R-Normal--18-120-100-100-C-90-ISO10646-1", 9, 18),
     ("-Misc-Fixed-Medium-R-Normal--20-200-75-75-C-100-ISO10646-1", 10, 20),
-    ("-Shinonome-Gothic-Medium-R-Normal--16-150-75-75-C-80-ISO10646-1", 8, 16),
+    ("-Misc-Fixed-Medium-R-Normal--16-150-75-75-C-80-ISO10646-1", 8, 16),  # resized
+    ("-Misc-Fixed-Medium-R-Normal--16-150-75-75-C-90-ISO10646-1", 9, 16),  # resized
+    ("-Misc-Fixed-Medium-R-Normal--18-170-75-75-C-100-ISO10646-1", 10, 18),  # resized
 ]
 
 
@@ -76,7 +79,7 @@ class FontMaskTokenizer:
 
     def __init__(
         self,
-        kernel: tuple[int, int] = (3, 3),
+        kernel: tuple[int, int] = (2, 2),
     ) -> None:
         self.kernel = kernel
         k = 1 << (kernel[0] * kernel[1])
@@ -233,7 +236,7 @@ class FontMaskTokenizer:
             data["token"].append(sep_a)
             data["xpos"].append(zero_a)
             data["ypos"].append(zero_a)
-            type_a = np.full([1], type_id, dtype=np.int64)
+            type_a = np.full([1], type_id + 1, dtype=np.int64)
             data["type"].append(type_a)
             datalen += cast(np.ndarray, x["token"]).ndim + 1
             if datalen >= max_length:
@@ -319,7 +322,7 @@ class FontMaskDataModule(L.LightningDataModule):
         val_repeat: int | None = None,
         batch_size: int = 256,
         data_type: str = "x11_bdf",
-        kernel: tuple[int, int] = (3, 3),
+        kernel: tuple[int, int] = (2, 2),
         predict_target: str | None = None,
         src_resize_prob: float = 0.2,
         src_drop_prob: float = 0.2,
@@ -391,9 +394,11 @@ class FontMaskDataModule(L.LightningDataModule):
             dataset = torch.utils.data.ChainDataset(
                 [
                     LocalBDFFontDataset(
-                        self.data_root,
+                        os.path.join(self.data_root, "local"),
                         subsets={
-                            "shnm8x16u.bdf",
+                            "8x16.bdf",
+                            "9x16.bdf",
+                            "10x18.bdf",
                         },
                     ),
                     X11BDFFontDataset(
@@ -633,13 +638,13 @@ class FontMaskModel(L.LightningModule):
         hidden_dim: int = 512,
         num_layers: int = 6,
         num_heads: int = 8,
-        max_sequence_length: int = 256,
+        max_sequence_length: int = 512,
         gamma: float = 0.99,
         src_mask_prob: float = 0.1,
         num_timesteps: int = 200,
         timestep_skip: int = 1,
         data_type: str = "x11_bdf",
-        kernel: tuple[int, int] = (3, 3),
+        kernel: tuple[int, int] = (2, 2),
         lr: float = 1e-4,
     ) -> None:
         super().__init__()
@@ -1044,6 +1049,84 @@ def cli_main():
         FontMaskModel,
         FontMaskDataModule,
     )
+
+
+def cli_predict(
+    *,
+    batch_size: int = 128,
+    data_type: str = "morning_light_bdf",
+    ckpt_path: str = "",
+    output: str = "",
+    timestep_skip: int = 1,
+    predict_target: str = "",
+    use_gpu: bool = False,
+):
+    from tqdm import tqdm
+
+    if not predict_target:
+        predict_target = (
+            "-Shinonome-Gothic-Medium-R-Normal--16-150-75-75-C-80-ISO10646-1"
+        )
+
+    data = FontMaskDataModule.load_from_checkpoint(
+        ckpt_path,
+        batch_size=batch_size,
+        predict_target=predict_target,
+    )
+    data.setup("predict")
+
+    model = FontMaskModel.load_from_checkpoint(
+        ckpt_path,
+        timestep_skip=timestep_skip,
+    )
+    model.eval()
+    if use_gpu:
+        model.cuda()
+
+    model_predict_step = torch.compile(
+        torch.no_grad(
+            model.predict_step
+        )
+    )
+
+    with torch.no_grad():
+        with open(output, "w") as fp:
+            for batch_idx, batch in tqdm(enumerate(data.predict_dataloader())):
+                if use_gpu:
+                    batch = {k: v.cuda() if isinstance(v, torch.Tensor) else v for k, v in batch.items()}
+                outputs = model_predict_step(batch, batch_idx)
+                charsets = outputs["charset"]
+                encodings = outputs["encoding"]
+                image = outputs["image"]
+                for sample_idx in range(len(image)):
+                    charset = charsets[sample_idx]
+                    encoding = encodings[sample_idx]
+                    image_hex = "".join(["%02X" % x for x in image[sample_idx].tobytes()])
+                    bbh, bbw = image[sample_idx].shape
+                    fp.write(f"{charset}\t{encoding}\t{bbw}\t{bbh}\t{image_hex}\n")
+
+
+def cli_display(*args, input: str = ""):
+    data = []
+    if not input:
+        input = "./output.txt"
+    with open(input) as fp:
+        for line in fp:
+            parts = line.rstrip().split("\t")
+            charset, encoding, bbw, bbh, image_hex = parts
+            encoding = int(encoding)
+            bbw = int(bbw)
+            bbh = int(bbh)
+            image = np.array(
+                [int(image_hex[i : i + 2], 16) for i in range(0, len(image_hex), 2)],
+                dtype=np.uint8,
+            ).reshape(bbh, bbw)
+            data.append((charset, int(encoding), image))
+            print(f"Charset: {charset}")
+            print(f"Encoding: U+{encoding:04x} Char: {chr(encoding)}")
+            for row in image:
+                line = "".join(["[]" if x > 0 else ". " for x in row])
+                print(line)
 
 
 if __name__ == "__main__":

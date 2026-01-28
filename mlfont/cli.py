@@ -171,5 +171,50 @@ class Main:
                     ufont.chars.append(ch)
             bdffont.save(ufont, os.path.join(output, file.replace("a.bdf", "u.bdf")))
 
+    def makeshnmku(
+        self,
+        *,
+        input: str = "data/ShinonomeBDFFontDataset/raw/shinonome-0.9.11/bdf/",
+        output: str = "data/local",
+    ) -> None:
+        r"""Make Unicode Shinonome kanji fonts."""
+
+        from functools import cache
+        from . import bdffont
+        import os
+
+        files = [
+            "shnmk12.bdf",
+            "shnmk14.bdf",
+            "shnmk16.bdf",
+        ]
+        names = [
+            "-Shinonome-Gothic-Medium-R-Normal--12-110-75-75-C-120-ISO10646-1",
+            "-Shinonome-Gothic-Medium-R-Normal--14-130-75-75-C-140-ISO10646-1",
+            "-Shinonome-Gothic-Medium-R-Normal--16-150-75-75-C-160-ISO10646-1",
+        ]
+
+        @cache
+        def jis_to_unicode(encoding: int) -> int:
+            byte1 = ((encoding >> 8) & 0xFF) | 0x80
+            byte2 = (encoding & 0xFF) | 0x80
+            bytes_seq = bytes([byte1, byte2])
+            char = bytes_seq.decode("euc_jp")
+            code_point = ord(char)
+            assert 0x80 <= code_point < 0x10000, "U+%04X" % code_point
+            return code_point
+
+        for file, name in zip(files, names):
+            ufont = bdffont.load(os.path.join(input, file))
+            ufont.font = name
+            ufont.properties["charset_registry"] = "ISO10646"
+            ufont.properties["charset_encoding"] = "1"
+            for ch in ufont.chars:
+                cp = ch.encoding
+                ch.encoding = jis_to_unicode(cp)
+                ch.name = "%04x" % ch.encoding
+            bdffont.save(ufont, os.path.join(output, file.replace(".bdf", "u.bdf")))
+
+
 if __name__ == "__main__":
     auto_cli(Main)

@@ -171,6 +171,62 @@ class Main:
                     ufont.chars.append(ch)
             bdffont.save(ufont, os.path.join(output, file.replace("a.bdf", "u.bdf")))
 
+    def makeresized(
+        self,
+        *,
+        input: str = "data/X11BDFFontDataset/raw/font-misc-misc-1.1.2",
+        output: str = "data/local",
+    ) -> None:
+        r"""Make Unicode Shinonome fonts."""
+
+        from . import bdffont
+        import os
+
+        files = [
+            (
+                "8x13.bdf", "8x16.bdf",
+                "-Misc-Fixed-Medium-R-Normal--16-150-75-75-C-80-ISO10646-1",
+                8, 16,
+            ),
+            (
+                "9x15.bdf", "9x16.bdf",
+                "-Misc-Fixed-Medium-R-Normal--16-150-75-75-C-90-ISO10646-1",
+                9, 16,
+            ),
+            (
+                "10x20.bdf", "10x18.bdf",
+                "-Misc-Fixed-Medium-R-Normal--18-170-75-75-C-100-ISO10646-1",
+                10, 18,
+            ),
+        ]
+
+        i8x16 = np.linspace(0.95, 12.75, 16, dtype=np.float64).astype(np.int32)
+        i9x16 = np.linspace(0.70, 14.70, 16, dtype=np.float64).astype(np.int32)
+        i10x18_1 = np.linspace(0.55, 19.55, 18, dtype=np.float64).astype(np.int32)
+        i10x18_2 = np.linspace(0.45, 19.45, 18, dtype=np.float64).astype(np.int32)
+
+        for src_file, dst_file, name, width, height in files:
+            font = bdffont.load(os.path.join(input, src_file))
+            font.font = name
+            font.fontboundingbox = (width, height, 0, -3)
+            font.size = (width, height, 75)
+            for ch in font.chars:
+                x = font.numpy(ch)
+                if width == 8:
+                    x = x[i8x16, :]
+                elif width == 9:
+                    x = x[i9x16, :]
+                    x = np.pad(x, ((0, 0), (0, 7)), mode="constant", constant_values=0)
+                elif width == 10:
+                    x = np.maximum(x[i10x18_1, :], x[i10x18_2, :])
+                    x = np.pad(x, ((0, 0), (0, 6)), mode="constant", constant_values=0)
+                x = np.clip(x, 0, 1)
+                mask = (1 << (7 - np.arange(8)))
+                x = np.sum(x.reshape(-1, 8) * mask[None, :], axis=-1).astype(np.uint8)
+                ch.bitmap = x.tobytes()
+                ch.bbx = (width, height, 0, -2)
+            bdffont.save(font, os.path.join(output, dst_file))
+
     def makeshnmku(
         self,
         *,

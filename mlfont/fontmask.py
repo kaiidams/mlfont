@@ -1068,10 +1068,9 @@ def cli_predict(
             "-Shinonome-Gothic-Medium-R-Normal--16-150-75-75-C-80-ISO10646-1"
         )
 
-    data = FontMaskDataModule(
+    data = FontMaskDataModule.load_from_checkpoint(
+        ckpt_path,
         batch_size=batch_size,
-        download=True,
-        data_type=data_type,
         predict_target=predict_target,
     )
     data.setup("predict")

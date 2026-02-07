@@ -1,57 +1,71 @@
-from . import bdffont
+import re
 import numpy as np
 from jsonargparse import auto_cli
 
+from . import bdffont
+
 
 class Main:
-    DEFAULT_TARGET = "-Shinonome-Gothic-Medium-R-Normal--16-150-75-75-C-80-ISO10646-1"
-
     def predict(
         self,
         *,
-        batch_size: int = 1,
+        batch_size: int = 128,
         data_type: str = "morning_light_bdf",
         ckpt_path: str,
         output: str,
         timestep_skip: int = 1,
-        predict_target: str = DEFAULT_TARGET,
+        predict_target: str,
+        use_gpu: bool = False,
     ) -> None:
         r"""Generate font with FontMaskModel."""
         from tqdm import tqdm
         import torch
         from .fontmask import FontMaskDataModule, FontMaskModel
 
-        data = FontMaskDataModule(
-            kernel=(2,2),
+        m = re.match(r"(\d+)x(\d+)", predict_target)
+        if m:
+            from .fontmask import _get_input_spec
+
+            predict_bbw = int(m.group(1))
+            predict_bbh = int(m.group(2))
+            for prop_id, bbw, bbh in _get_input_spec(data_type=data_type):
+                if bbw == predict_bbw and bbh == predict_bbh:
+                    predict_target = prop_id
+                    break
+
+        data = FontMaskDataModule.load_from_checkpoint(
+            ckpt_path,
             batch_size=batch_size,
-            download=True,
-            data_type=data_type,
             predict_target=predict_target,
         )
         data.setup("predict")
 
         model = FontMaskModel.load_from_checkpoint(
             ckpt_path,
-            kernel=(2,2),
             timestep_skip=timestep_skip,
         )
+        if use_gpu:
+            model.cuda()
         model.eval()
         model_predict_step = torch.compile(
             torch.no_grad(model.predict_step)
         )
 
-        with open(output, "w") as fp:
-            for batch_idx, batch in tqdm(enumerate(data.predict_dataloader())):
-                outputs = model_predict_step(batch, batch_idx)
-                charsets = outputs["charset"]
-                encodings = outputs["encoding"]
-                image = outputs["image"]
-                for sample_idx in range(len(image)):
-                    charset = charsets[sample_idx]
-                    encoding = encodings[sample_idx]
-                    image_hex = "".join(["%02X" % x for x in image[sample_idx].tobytes()])
-                    bbh, bbw = image[sample_idx].shape
-                    fp.write(f"{charset}\t{encoding}\t{bbw}\t{bbh}\t{image_hex}\n")
+        with torch.no_grad():
+            with open(output, "w") as fp:
+                for batch_idx, batch in tqdm(enumerate(data.predict_dataloader())):
+                    if use_gpu:
+                        batch = {k: v.cuda() if isinstance(v, torch.Tensor) else v for k, v in batch.items()}
+                    outputs = model_predict_step(batch, batch_idx)
+                    charsets = outputs["charset"]
+                    encodings = outputs["encoding"]
+                    image = outputs["image"]
+                    for sample_idx in range(len(image)):
+                        charset = charsets[sample_idx]
+                        encoding = encodings[sample_idx]
+                        image_hex = "".join(["%02X" % x for x in image[sample_idx].tobytes()])
+                        bbh, bbw = image[sample_idx].shape
+                        fp.write(f"{charset}\t{encoding}\t{bbw}\t{bbh}\t{image_hex}\n")
 
     def display(
         self,
@@ -177,7 +191,7 @@ class Main:
         input: str = "data/X11BDFFontDataset/raw/font-misc-misc-1.1.2",
         output: str = "data/local",
     ) -> None:
-        r"""Make Unicode Shinonome fonts."""
+        r"""Make resized BDF fonts."""
 
         from . import bdffont
         import os

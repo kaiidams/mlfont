@@ -34,3 +34,19 @@ python -m mlfont.cli predict \
     --batch_size=4 \
     --predict_target=7x14 \
 ```
+
+### Display the result
+
+```sh
+python -m mlfont.cli display \
+    --input=./tmp/output-6x9.txt \
+```
+
+### Export BDF files
+
+```sh
+python -m mlfont.cli export \
+    --input=./tmp/output-6x9.txt \
+    --base=./tmp/6x9.bdf \
+    --output ./tmp/ml6x9.bdf
+```

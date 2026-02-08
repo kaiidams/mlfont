@@ -90,43 +90,44 @@ class Main:
                     line = "".join(["[]" if x > 0 else ". " for x in row])
                     print(line)
 
-    def makebdf(
+    def export(
         self,
         *,
+        base: str,
         input: str,
         output: str,
     ) -> None:
         r"""Export as a BDF file."""
-        font = bdffont.load("data/local/shnm8x16u.bdf")
-        font.font = font.font.replace("-Shinonome-Gothic-", "-ML-Fixed-")
+        font = bdffont.load(base)
+        font.font = (
+            font.font
+            .replace("-Shinonome-Gothic-", "-ML-Fixed-")
+            .replace("-Misc-Fixed-", "-ML-Fixed-")
+        )
         font.properties["foundry"] = "ML"
         font.properties["family_name"] = "Fixed"
+        _, _, dispx, dispy = font.fontboundingbox
         with open(input) as fp:
             for line in fp:
                 parts = line.rstrip().split("\t")
                 charset, encoding, bbw, bbh, image_hex = parts
+                assert charset == "ISO10646-1", charset
                 encoding = int(encoding)
                 bbw = int(bbw)
                 bbh = int(bbh)
                 image = np.array(
-                    [int(image_hex[i : i + 2], 16) for i in range(0, len(image_hex), 2)],
+                    [int(image_hex[i: i + 2], 16) for i in range(0, len(image_hex), 2)],
                     dtype=np.uint8,
                 ).reshape(bbh, bbw)
-                image = np.minimum(image > 0, 1)
-                bitmap_width = image.shape[1]
-                bitmap_height = image.shape[0]
-                bitmap_rowbytes = (bitmap_width + 7) // 8
-                mask = (1 << (7 - np.arange(8)))
-                x = np.sum(image.reshape(-1, 8) * mask[None, :], axis=-1).astype(np.uint8)
+                image = np.minimum(image, 1)
+                x = np.packbits(image, axis=1)
                 bitmap = x.tobytes()
-                assert len(bitmap) == 16, len(bitmap)
-                # TODO support different geometry.
                 char = bdffont.BDFChar(
                     f"U+{encoding:04x}",
                     encoding=encoding,
-                    bbx=(8, 16, 0, -2),
-                    swidth=(480, 0),
-                    dwidth=(8, 0),
+                    bbx=(bbw, bbh, dispx, dispy),
+                    swidth=(bbw * 72000 // (75 * bbh), 0),
+                    dwidth=(bbw, 0),
                     bitmap=bitmap,
                 )
                 font.chars.append(char)

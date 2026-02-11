@@ -24,4 +24,4 @@ Some of missing glyphs in 8x13 are available in ml8x13.
 
 ## BDF font
 
-Download generated BDF font [fonts-ml-0.1.tar.gz](./fonts-ml-0.1.tar.gz).
+Download generated BDF font [fonts-ml-0.1.tar.gz](https://github.com/kaiidams/mlfont/releases/download/v0.1/fonts-ml-0.1.tar.gz).

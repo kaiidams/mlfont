@@ -123,7 +123,7 @@ class Main:
                 x = np.packbits(image, axis=1)
                 bitmap = x.tobytes()
                 char = bdffont.BDFChar(
-                    f"U+{encoding:04x}",
+                    f"gen{encoding:04X}",
                     encoding=encoding,
                     bbx=(bbw, bbh, dispx, dispy),
                     swidth=(bbw * 72000 // (75 * bbh), 0),

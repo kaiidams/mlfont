@@ -16,8 +16,12 @@ dependencies = [
 [project.optional-dependencies]
 dev = [
     "flake8",
+    "pytest",
 ]
 
 [build-system]
 requires = ["flit_core<4"]
 build-backend = "flit_core.buildapi"
+
+[tool.pytest.ini_options]
+pythonpath = ["."]

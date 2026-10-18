@@ -502,7 +502,7 @@ def make_random_image(
             x0, x1 = x1, x0
         if y0 > y1:
             y0, y1 = y1, y0
-        image[y0 : y1 + 1, x0 : x1 + 1] = c
+        image[y0: y1 + 1, x0: x1 + 1] = c
     if random.random() < line_prob:
         x0 = random.randint(0, bbw - 1)
         y0 = random.randint(0, bbh - 1)
@@ -510,10 +510,10 @@ def make_random_image(
             x1 = random.randint(0, bbw - 1)
             if x0 > x1:
                 x0, x1 = x1, x0
-            image[y0, x0 : x1 + 1] = 1
+            image[y0, x0: x1 + 1] = 1
         else:
             y1 = random.randint(0, bbh - 1)
             if y0 > y1:
                 y0, y1 = y1, y0
-            image[y0 : y1 + 1, x0] = 1
+            image[y0: y1 + 1, x0] = 1
     return image * 255

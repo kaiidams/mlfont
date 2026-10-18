@@ -85,7 +85,7 @@ class Main:
                 bbh = int(bbh)
                 image = np.array(
                     [
-                        int(image_hex[i : i + 2], 16)
+                        int(image_hex[i: i + 2], 16)
                         for i in range(0, len(image_hex), 2)
                     ],
                     dtype=np.uint8,
@@ -121,7 +121,7 @@ class Main:
                 bbh = int(bbh)
                 image = np.array(
                     [
-                        int(image_hex[i : i + 2], 16)
+                        int(image_hex[i: i + 2], 16)
                         for i in range(0, len(image_hex), 2)
                     ],
                     dtype=np.uint8,

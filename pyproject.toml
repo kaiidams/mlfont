@@ -15,17 +15,9 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = [
-    "ruff",
+    "flake8",
 ]
 
 [build-system]
 requires = ["flit_core<4"]
 build-backend = "flit_core.buildapi"
-
-[tool.ruff]
-target-version = "py312"
-include = ["mlfont/*.py"]
-line-length = 88
-
-[tool.ruff.lint.pydocstyle]
-convention = "pep257"

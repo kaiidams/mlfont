@@ -351,7 +351,7 @@ class BDFFontReader:
                         # 'font-schumacher-misc-1.1.2/clB9x15.bdf' has
                         # need more data. Append to it.
                         kw = kw + "0" * (bitmap_rowbytes * 2 - len(kw))
-                    x = [int(kw[i : i + 2], 16) for i in range(0, len(kw), 2)]
+                    x = [int(kw[i: i + 2], 16) for i in range(0, len(kw), 2)]
                     x = bytes(x)
                     bitmap_data.append(x)
             else:
@@ -417,7 +417,7 @@ class BDFFontWriter:
             bitmap_width = char.bbx[0]
             bitmap_rowbytes = (bitmap_width + 7) // 8
             for i in range(0, len(bitmap), bitmap_rowbytes):
-                for b in bitmap[i : i + bitmap_rowbytes]:
+                for b in bitmap[i: i + bitmap_rowbytes]:
                     fp.write("%02x" % b)
                 fp.write("\n")
             fp.write("ENDCHAR\n")
@@ -490,7 +490,7 @@ def draw_glyphs(glyphs: list[tuple[BDFFont, BDFChar]]) -> np.ndarray:
         dy = cy - fch.bbx[1] - fch.bbx[3]
         g = font.numpy(fch)
         h, w = g.shape
-        X[dy : dy + h, dx : dx + w] |= g
+        X[dy: dy + h, dx: dx + w] |= g
         cx += fch.dwidth[0]
         cy += fch.dwidth[1]
     return X

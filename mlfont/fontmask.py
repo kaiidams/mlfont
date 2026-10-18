@@ -1083,17 +1083,16 @@ def cli_predict(
     if use_gpu:
         model.cuda()
 
-    model_predict_step = torch.compile(
-        torch.no_grad(
-            model.predict_step
-        )
-    )
+    model_predict_step = torch.compile(torch.no_grad(model.predict_step))
 
     with torch.no_grad():
         with open(output, "w") as fp:
             for batch_idx, batch in tqdm(enumerate(data.predict_dataloader())):
                 if use_gpu:
-                    batch = {k: v.cuda() if isinstance(v, torch.Tensor) else v for k, v in batch.items()}
+                    batch = {
+                        k: v.cuda() if isinstance(v, torch.Tensor) else v
+                        for k, v in batch.items()
+                    }
                 outputs = model_predict_step(batch, batch_idx)
                 charsets = outputs["charset"]
                 encodings = outputs["encoding"]
@@ -1101,7 +1100,9 @@ def cli_predict(
                 for sample_idx in range(len(image)):
                     charset = charsets[sample_idx]
                     encoding = encodings[sample_idx]
-                    image_hex = "".join(["%02X" % x for x in image[sample_idx].tobytes()])
+                    image_hex = "".join(
+                        ["%02X" % x for x in image[sample_idx].tobytes()]
+                    )
                     bbh, bbw = image[sample_idx].shape
                     fp.write(f"{charset}\t{encoding}\t{bbw}\t{bbh}\t{image_hex}\n")
 

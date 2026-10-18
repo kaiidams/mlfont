@@ -47,15 +47,16 @@ class Main:
         if use_gpu:
             model.cuda()
         model.eval()
-        model_predict_step = torch.compile(
-            torch.no_grad(model.predict_step)
-        )
+        model_predict_step = torch.compile(torch.no_grad(model.predict_step))
 
         with torch.no_grad():
             with open(output, "w") as fp:
                 for batch_idx, batch in tqdm(enumerate(data.predict_dataloader())):
                     if use_gpu:
-                        batch = {k: v.cuda() if isinstance(v, torch.Tensor) else v for k, v in batch.items()}
+                        batch = {
+                            k: v.cuda() if isinstance(v, torch.Tensor) else v
+                            for k, v in batch.items()
+                        }
                     outputs = model_predict_step(batch, batch_idx)
                     charsets = outputs["charset"]
                     encodings = outputs["encoding"]
@@ -63,7 +64,9 @@ class Main:
                     for sample_idx in range(len(image)):
                         charset = charsets[sample_idx]
                         encoding = encodings[sample_idx]
-                        image_hex = "".join(["%02X" % x for x in image[sample_idx].tobytes()])
+                        image_hex = "".join(
+                            ["%02X" % x for x in image[sample_idx].tobytes()]
+                        )
                         bbh, bbw = image[sample_idx].shape
                         fp.write(f"{charset}\t{encoding}\t{bbw}\t{bbh}\t{image_hex}\n")
 
@@ -81,7 +84,10 @@ class Main:
                 bbw = int(bbw)
                 bbh = int(bbh)
                 image = np.array(
-                    [int(image_hex[i : i + 2], 16) for i in range(0, len(image_hex), 2)],
+                    [
+                        int(image_hex[i : i + 2], 16)
+                        for i in range(0, len(image_hex), 2)
+                    ],
                     dtype=np.uint8,
                 ).reshape(bbh, bbw)
                 print(f"Charset: {charset}")
@@ -99,10 +105,8 @@ class Main:
     ) -> None:
         r"""Export as a BDF file."""
         font = bdffont.load(base)
-        font.font = (
-            font.font
-            .replace("-Shinonome-Gothic-", "-ML-Fixed-")
-            .replace("-Misc-Fixed-", "-ML-Fixed-")
+        font.font = font.font.replace("-Shinonome-Gothic-", "-ML-Fixed-").replace(
+            "-Misc-Fixed-", "-ML-Fixed-"
         )
         font.properties["foundry"] = "ML"
         font.properties["family_name"] = "Fixed"
@@ -116,7 +120,10 @@ class Main:
                 bbw = int(bbw)
                 bbh = int(bbh)
                 image = np.array(
-                    [int(image_hex[i: i + 2], 16) for i in range(0, len(image_hex), 2)],
+                    [
+                        int(image_hex[i : i + 2], 16)
+                        for i in range(0, len(image_hex), 2)
+                    ],
                     dtype=np.uint8,
                 ).reshape(bbh, bbw)
                 image = np.minimum(image, 1)
@@ -159,12 +166,12 @@ class Main:
 
         M = {}
         for cp in range(256):
-            if 0x80 <= cp < 0xa1 or 0xe0 <= cp < 0x100:
+            if 0x80 <= cp < 0xA1 or 0xE0 <= cp < 0x100:
                 continue
-            if 0x00 <= cp < 0x80 and cp != 0x7e:  # 0x7E Backslash
+            if 0x00 <= cp < 0x80 and cp != 0x7E:  # 0x7E Backslash
                 continue
-            if cp == 0x7e:
-                ch = chr(0x203e)  # U+203E Overline
+            if cp == 0x7E:
+                ch = chr(0x203E)  # U+203E Overline
             else:
                 ch = bytes([cp]).decode("Windows-31J")
             M[cp] = ch
@@ -199,19 +206,25 @@ class Main:
 
         files = [
             (
-                "8x13.bdf", "8x16.bdf",
+                "8x13.bdf",
+                "8x16.bdf",
                 "-Misc-Fixed-Medium-R-Normal--16-150-75-75-C-80-ISO10646-1",
-                8, 16,
+                8,
+                16,
             ),
             (
-                "9x15.bdf", "9x16.bdf",
+                "9x15.bdf",
+                "9x16.bdf",
                 "-Misc-Fixed-Medium-R-Normal--16-150-75-75-C-90-ISO10646-1",
-                9, 16,
+                9,
+                16,
             ),
             (
-                "10x20.bdf", "10x18.bdf",
+                "10x20.bdf",
+                "10x18.bdf",
                 "-Misc-Fixed-Medium-R-Normal--18-170-75-75-C-100-ISO10646-1",
-                10, 18,
+                10,
+                18,
             ),
         ]
 
@@ -236,7 +249,7 @@ class Main:
                     x = np.maximum(x[i10x18_1, :], x[i10x18_2, :])
                     x = np.pad(x, ((0, 0), (0, 6)), mode="constant", constant_values=0)
                 x = np.clip(x, 0, 1)
-                mask = (1 << (7 - np.arange(8)))
+                mask = 1 << (7 - np.arange(8))
                 x = np.sum(x.reshape(-1, 8) * mask[None, :], axis=-1).astype(np.uint8)
                 ch.bitmap = x.tobytes()
                 ch.bbx = (width, height, 0, -2)

@@ -10,7 +10,7 @@ from typing import TextIO
 from dataclasses import dataclass, field
 import numpy as np
 
-__all__ = ["BDFFont", "BDFChar", "load"]
+__all__ = ["BDFChar", "BDFFont", "load", "save"]
 
 KEYWORDS = {
     # s - accepts a string arg
@@ -53,6 +53,30 @@ class State:
 
 @dataclass
 class BDFChar:
+    """A glyph entry in a BDF font.
+
+    Represents character properties and bitmap information defined in a
+    STARTCHAR ... ENDCHAR block according to the Adobe BDF specification.
+
+    Attributes:
+        name: Glyph name (STARTCHAR argument), e.g. "char0" or "A".
+        encoding: Character code point or encoding tuple (ENCODING argument).
+            An integer for standard encodings (or -1 for unencoded glyphs),
+            or a tuple of integers for multi-byte encodings (e.g. JIS X 0208).
+        bbx: Glyph bounding box as (width, height, x_offset, y_offset) in
+            pixels (BBX argument).
+        swidth: Scalable width (sx, sy) vector for writing direction 0
+            (horizontal) in 1/1000th of font size (SWIDTH argument).
+        dwidth: Device width (dx, dy) advance vector in device pixels for
+            writing direction 0 (DWIDTH argument).
+        swidth1: Scalable width (sx, sy) vector for writing direction 1
+            (vertical) in 1/1000th of font size (SWIDTH1 argument).
+        dwidth1: Device width (dx, dy) advance vector in device pixels for
+            writing direction 1 (DWIDTH1 argument).
+        bitmap: Glyph bitmap data. Either raw bytes or an integer byte offset
+            pointing into the parent BDFFont's shared bitmap buffer.
+    """
+
     name: str = ""
     encoding: int | tuple[int, int] = 0
     bbx: tuple[int, int, int, int] | None = None
@@ -68,6 +92,32 @@ class BDFChar:
 
 @dataclass
 class BDFFont:
+    """In-memory representation of an Adobe BDF (Bitmap Distribution Format) font.
+
+    Contains global font headers, properties, character glyph definitions,
+    and bitmap data as specified in Adobe BDF Specification 2.2.
+
+    Attributes:
+        version: BDF specification version string (e.g. "2.1" or "2.2").
+        comment: Header comments concatenated with newlines.
+        contentversion: Content version of the font program, if present.
+        font: Font name, typically an X Logical Font Description (XLFD) name.
+        size: Font size specification as (point_size, x_resolution, y_resolution).
+        fontboundingbox: Global font bounding box as
+            (width, height, x_offset, y_offset).
+        metricsset: Writing direction indicator (0 for horizontal, 1 for
+            vertical, 2 for both).
+        swidth: Default scalable width (sx, sy) vector for direction 0.
+        dwidth: Default device width (dx, dy) vector for direction 0.
+        swidth1: Default scalable width (sx, sy) vector for direction 1.
+        dwidth1: Default device width (dx, dy) vector for direction 1.
+        vvector: Origin offset vector (vx, vy) between direction 0 and direction 1.
+        properties: Dictionary of font properties mapping lowercase property names
+            to their values (strings, integers, or tuples).
+        chars: List of character glyphs (BDFChar instances) contained in the font.
+        bitmap: Concatenated raw bitmap bytes for all characters in the font.
+    """
+
     version: str = ""
     comment: str = ""
     contentversion: int | None = None
@@ -87,6 +137,18 @@ class BDFFont:
     def find(
         self, *, name: str | None = None, encoding: int | tuple[int, int] | None = None
     ) -> BDFChar | None:
+        """Find a character glyph by name or encoding.
+
+        Args:
+            name: Glyph name to search for (e.g., "A" or "char65").
+            encoding: Character code point or encoding tuple to search for.
+
+        Returns:
+            The matching BDFChar glyph if found, or None otherwise.
+
+        Raises:
+            ValueError: If neither name nor encoding is provided.
+        """
         if name is not None:
             for char in self.chars:
                 if char.name == name:
@@ -101,6 +163,14 @@ class BDFFont:
             raise ValueError("Either one of name or encoding must be given")
 
     def tobytes(self, char: BDFChar) -> bytes:
+        """Extract the raw bitmap bytes for a given character glyph.
+
+        Args:
+            char: The BDFChar instance whose bitmap bytes to retrieve.
+
+        Returns:
+            Raw bytes containing the packed bitmap data for the glyph.
+        """
         bitmap_or_index = char.bitmap
         if isinstance(bitmap_or_index, bytes):
             return bitmap_or_index
@@ -115,6 +185,15 @@ class BDFFont:
         return self.bitmap[bitmap_start:bitmap_end]
 
     def numpy(self, char: BDFChar) -> np.ndarray:
+        """Convert a character glyph bitmap to a 2D NumPy array.
+
+        Args:
+            char: The BDFChar instance to convert.
+
+        Returns:
+            A 2D uint8 NumPy array of shape (height, width) where foreground
+            pixels are 255 and background pixels are 0.
+        """
         if char.bbx is None:
             raise ValueError("char.bbx is not available.")
         bitmap_width = char.bbx[0]
@@ -344,6 +423,15 @@ class BDFFontWriter:
 
 
 def load(file: str) -> BDFFont:
+    """Load and parse a BDF font file.
+
+    Args:
+        file: Path to the BDF font file to read.
+
+    Returns:
+        A BDFFont instance containing the parsed font headers, properties,
+        character glyphs, and bitmap data.
+    """
     reader = BDFFontReader()
     with open(file) as fp:
         font = reader.read(fp)
@@ -351,6 +439,12 @@ def load(file: str) -> BDFFont:
 
 
 def save(font: BDFFont, file: str) -> None:
+    """Save a BDFFont instance to a BDF font file.
+
+    Args:
+        font: The BDFFont instance to serialize.
+        file: Destination file path to write the BDF font to.
+    """
     writer = BDFFontWriter()
     with open(file, "w") as fp:
         writer.write(font, fp)

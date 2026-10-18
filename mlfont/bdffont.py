@@ -6,8 +6,10 @@ Loading BDF font. See
 https://adobe-type-tools.github.io/font-tech-notes/pdfs/5005.BDF_Spec.pdf
 """
 
-from typing import TextIO
+import os
 from dataclasses import dataclass, field
+from typing import TextIO
+
 import numpy as np
 
 __all__ = ["BDFChar", "BDFFont", "load", "save"]
@@ -422,7 +424,7 @@ class BDFFontWriter:
         fp.write("ENDFONT\n")
 
 
-def load(file: str) -> BDFFont:
+def load(file: str | os.PathLike) -> BDFFont:
     """Load and parse a BDF font file.
 
     Args:
@@ -438,7 +440,7 @@ def load(file: str) -> BDFFont:
     return font
 
 
-def save(font: BDFFont, file: str) -> None:
+def save(font: BDFFont, file: str | os.PathLike) -> None:
     """Save a BDFFont instance to a BDF font file.
 
     Args:

@@ -69,6 +69,17 @@ DEFAULT_SHINONOME_SUBSETS = {
 
 
 class X11BDFFontDataset(IterableDataset):
+    """An iterable dataset of BDF fonts from X.Org X11 font distributions.
+
+    Args:
+        root: Root directory where downloaded archives and extracted.
+        download: If True, downloads the archive if not already present.
+        subsets: Set of BDF font file names to include.
+        no_cjk_unicode: If True, excludes Unicode CJK fonts.
+        no_cjk_wide: If True, excludes CJK fonts.
+        font_filter: Callable to filter fonts.
+    """
+
     def __init__(
         self,
         root: str,
@@ -104,6 +115,7 @@ class X11BDFFontDataset(IterableDataset):
 
     @property
     def raw_folder(self) -> str:
+        """Directory path where raw archives and extracted files are stored."""
         return os.path.join(self.root, self.__class__.__name__, "raw")
 
     def _download_checksums(self):
@@ -180,6 +192,14 @@ class X11BDFFontDataset(IterableDataset):
 
 
 class ShinonomeBDFFontDataset(IterableDataset):
+    """An iterable dataset of Japanese Shinonome BDF fonts.
+
+    Args:
+        root: Root directory where downloaded archives and extracted.
+        download: If True, downloads the archive if not already present.
+        subsets: Set of BDF font file names to include.
+    """
+
     def __init__(
         self,
         root: str,
@@ -210,6 +230,7 @@ class ShinonomeBDFFontDataset(IterableDataset):
 
     @property
     def raw_folder(self) -> str:
+        """Directory path where raw archives and extracted files are stored."""
         return os.path.join(self.root, self.__class__.__name__, "raw")
 
     def _download_archive(self, file: str, md5: str):
@@ -250,6 +271,13 @@ class ShinonomeBDFFontDataset(IterableDataset):
 
 
 class LocalBDFFontDataset(IterableDataset):
+    """An iterable dataset of BDF fonts loaded from a local directory.
+
+    Args:
+        root: Root directory containing local BDF files.
+        subsets: Set of BDF font file names to include.
+    """
+
     def __init__(
         self,
         root: str,

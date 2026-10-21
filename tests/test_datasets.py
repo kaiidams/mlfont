@@ -3,6 +3,11 @@
 
 import unittest
 
+try:
+    import torch
+except ImportError:
+    raise unittest.SkipTest("torch is not available")
+
 import numpy as np
 
 from mlfont.datasets import (

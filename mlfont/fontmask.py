@@ -1,12 +1,15 @@
 # Copyright (c) Katsuya Iida.  All Rights Reserved.
 # See LICENSE in the project root for license information.
 
+"""FontMask model implementations.
+"""
+
 import logging
 import os
 import random
 from typing import cast
 
-from mlfont.datasets import (
+from .datasets import (
     GroupedFontDataset,
     PropIdImage,
     ShinonomeBDFFontDataset,

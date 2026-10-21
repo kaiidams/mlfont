@@ -1,6 +1,9 @@
 # Copyright (c) Katsuya Iida.  All Rights Reserved.
 # See LICENSE in the project root for license information.
 
+"""Dataset loaders and utilities for BDF fonts.
+"""
+
 import logging
 import os
 import random
@@ -309,6 +312,14 @@ GroupKey = Any
 
 
 class PropIdImage(NamedTuple):
+    """A glyph image with its font identifier and character encoding.
+
+    Attributes:
+        prop_id: Font identifier.
+        encoding: Character code point.
+        image: 2D bitmap image array.
+    """
+
     prop_id: str
     encoding: int
     image: np.ndarray
@@ -390,26 +401,19 @@ def groupby_fonts(
     return [(k, v) for k, v in result if len(v) >= min_items]
 
 
-class FontDataset(torch.utils.data.Dataset):
-    def __init__(
-        self,
-        iter,
-        transform: Callable[[PropIdImage], Any],
-        value_fn: Callable[
-            [bdffont.BDFFont, bdffont.BDFChar], PropIdImage
-        ] = _prop_id_image,
-    ) -> None:
-        self.transform = transform
-        self.data = [value_fn(*x) for x in iter]
-
-    def __len__(self):
-        return len(self.data)
-
-    def __getitem__(self, idx):
-        return self.transform(self.data[idx])
-
-
 class GroupedFontDataset(Dataset):
+    """Dataset of BDF font glyphs grouped by character encodings.
+
+    Args:
+        iter: Iterable of (BDFFont, BDFChar) pairs.
+        transform: Transform to apply to the dataset.
+        key_fn: Function to get the key for grouping.
+        value_fn: Function to get the value for grouping.
+        remove_duplicates: Whether to remove duplicate images.
+        min_items: Minimum number of items per group.
+        predict_target: Target for prediction.
+    """
+
     def __init__(
         self,
         iter,
@@ -479,6 +483,15 @@ class GroupedFontDataset(Dataset):
 
 
 def random_resize_image(input: np.ndarray, size: tuple[int, int]) -> np.ndarray:
+    """Randomly resize a bitmap image to a target size.
+
+    Args:
+        input: Input bitmap image as a NumPy array.
+        size: Target (width, height) tuple.
+
+    Returns:
+        Resized bitmap image.
+    """
     if input.size == 0:
         return input
     oldh, oldw = input.shape[-2:]
@@ -508,23 +521,38 @@ def random_resize_image(input: np.ndarray, size: tuple[int, int]) -> np.ndarray:
 
 
 def make_random_image(
-    min_bbw: int = 4,
-    max_bbw: int = 12,
-    min_bbh: int = 6,
-    max_bbh: int = 24,
+    min_width: int = 4,
+    max_width: int = 12,
+    min_height: int = 6,
+    max_height: int = 24,
+    *,
     dot_prob: float = 0.2,
     block_prob: float = 0.8,
     line_prob: float = 0.8,
-):
-    bbw = random.randint(min_bbw, max_bbw)
-    bbh = random.randint(min_bbh, max_bbh)
-    image = np.random.random(size=[bbh, bbw]) < dot_prob
+) -> np.ndarray:
+    """Generate a synthetic random bitmap image with noise, blocks, and lines.
+
+    Args:
+        min_width: Minimum image width.
+        max_width: Maximum image width.
+        min_height: Minimum image height.
+        max_height: Maximum image height.
+        dot_prob: Probability of random background dots.
+        block_prob: Probability of adding a rectangular block.
+        line_prob: Probability of adding a horizontal or vertical line.
+
+    Returns:
+        Generated 2D bitmap image array with values 0 or 255.
+    """
+    width = random.randint(min_width, max_width)
+    height = random.randint(min_height, max_height)
+    image = np.random.random(size=[height, width]) < dot_prob
     image = image.astype(np.uint8)
     if random.random() < block_prob:
-        x0 = random.randint(0, bbw - 1)
-        y0 = random.randint(0, bbh - 1)
-        x1 = random.randint(0, bbw - 1)
-        y1 = random.randint(0, bbh - 1)
+        x0 = random.randint(0, width - 1)
+        y0 = random.randint(0, height - 1)
+        x1 = random.randint(0, width - 1)
+        y1 = random.randint(0, height - 1)
         c = 1 if random.random() < dot_prob else 0
         if x0 > x1:
             x0, x1 = x1, x0
@@ -532,15 +560,15 @@ def make_random_image(
             y0, y1 = y1, y0
         image[y0: y1 + 1, x0: x1 + 1] = c
     if random.random() < line_prob:
-        x0 = random.randint(0, bbw - 1)
-        y0 = random.randint(0, bbh - 1)
+        x0 = random.randint(0, width - 1)
+        y0 = random.randint(0, height - 1)
         if random.random() < 0.5:
-            x1 = random.randint(0, bbw - 1)
+            x1 = random.randint(0, width - 1)
             if x0 > x1:
                 x0, x1 = x1, x0
             image[y0, x0: x1 + 1] = 1
         else:
-            y1 = random.randint(0, bbh - 1)
+            y1 = random.randint(0, height - 1)
             if y0 > y1:
                 y0, y1 = y1, y0
             image[y0: y1 + 1, x0] = 1

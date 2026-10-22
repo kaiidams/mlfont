@@ -20,11 +20,11 @@ class Main:
         r"""Generate font with FontMaskModel."""
         from tqdm import tqdm
         import torch
-        from .fontmask import FontMaskDataModule, FontMaskModel
+        from .models import FontMaskDataModule, FontMaskModel
 
         m = re.match(r"(\d+)x(\d+)", predict_target)
         if m:
-            from .fontmask import _get_input_spec
+            from .models import _get_input_spec
 
             predict_bbw = int(m.group(1))
             predict_bbh = int(m.group(2))

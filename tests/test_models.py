@@ -8,7 +8,7 @@ try:
 except ImportError:
     raise unittest.SkipTest("torch is not available")
 
-from mlfont.fontmask import (
+from mlfont.models import (
     FontMaskDataModule,
     FontMaskModel,
     FontMaskTokenizer,

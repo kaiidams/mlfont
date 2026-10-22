@@ -78,7 +78,11 @@ MORNING_LIGHT_BDF_V2_INPUT_SPECS = [
 
 
 class FontMaskTokenizer:
-    """Tokenizer for BDF font bitmaps that generates a token for each block."""
+    """Tokenizer for BDF font bitmaps that generates a token for each block.
+
+    Args:
+        kernel: kernel size for pooling
+    """
 
     def __init__(
         self,
@@ -98,6 +102,22 @@ class FontMaskTokenizer:
         type_ids: list[list[int]],
         max_length: int = 256,
     ):
+        """Create a batch of tokenized image data.
+
+        Args:
+            images: list of list of bitmaps (2D numpy arrays).
+            type_ids: list of list of type ids corresponding to each image.
+            max_length: maximum length of token sequence.
+
+        Returns:
+            dict of tokenized data containing:
+                - ``token``: Token IDs representing the images. The first token is the ``[CLS]`` token.
+                    Each bitmap is terminated by ``[SEP]``.
+                - ``xpos``: 1-based x position.
+                - ``ypos``: 1-based y position.
+                - ``type``: Type IDs for each token.
+                - ``mask``: Boolean mask indicating padding positions (True for padding).
+        """
         data = {"token": [], "xpos": [], "ypos": [], "type": []}
         for image, type_id in zip(images, type_ids):
             for k, v in self.encode_list(image, type_id, max_length=max_length).items():
@@ -113,7 +133,22 @@ class FontMaskTokenizer:
 
     def encode_batch(
         self, images: list[np.ndarray], type_ids: list[int], max_length: int = 256
-    ):
+    ) -> dict[str, np.ndarray]:
+        """Create a batch of tokenized image data.
+
+        Args:
+            images: list of bitmaps (2D numpy arrays).
+            type_ids: list of type ids corresponding to each image.
+            max_length: maximum length of token sequence.
+
+        Returns:
+            dict of tokenized data containing:
+                - ``token``: Token IDs representing the images. The first token is the ``[CLS]`` token.
+                - ``xpos``: 1-based x position.
+                - ``ypos``: 1-based y position.
+                - ``type``: Type IDs for each token.
+                - ``mask``: Boolean mask indicating padding positions (True for padding).
+        """
         data = {"token": [], "xpos": [], "ypos": [], "type": []}
         zero_a = np.array([0], dtype=np.int64)
         cls_a = np.array([self.cls_id], dtype=np.int64)
@@ -133,7 +168,7 @@ class FontMaskTokenizer:
     def _padarray(self, x: list[np.ndarray], pad_value: int = 0, max_length: int = 256):
         z = np.full([len(x), max_length], pad_value, dtype=x[0].dtype)
         for i, y in enumerate(x):
-            z[i, : y.shape[0]] = y
+            z[i, : y.shape[0]] = y[: z.shape[1]]
         return z
 
     def _splitarray(self, x: np.ndarray, mask: np.ndarray) -> list[np.ndarray]:

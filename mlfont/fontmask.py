@@ -19,6 +19,7 @@ from .datasets import (
     make_random_image,
 )
 import lightning as L
+from lightning.pytorch.cli import LightningCLI
 from torch import nn
 from torch.utils.data import DataLoader
 import torch
@@ -26,6 +27,13 @@ import numpy as np
 from torchmetrics.classification import Accuracy
 
 logger = logging.getLogger(__name__)
+
+TEST_INPUT_SPECS = [
+    ("-Misc-Fixed-Medium-R-Normal--16-150-75-75-C-80-ISO10646-1", 8, 16),  # edited
+    ("-Misc-Fixed-Medium-R-Normal--16-150-75-75-C-90-ISO10646-1", 9, 16),  # edited
+    ("-Misc-Fixed-Medium-R-Normal--18-170-75-75-C-100-ISO10646-1", 10, 18),  # edited
+    ("-ML-Fixed-Medium-R-Normal--16-150-75-75-C-80-ISO10646-1", 8, 16),  # edited
+]
 
 SHINONOME_BDF_V2_INPUT_SPECS = [
     ("-Shinonome-Gothic-Medium-R-Normal--12-110-75-75-C-60-ISO8859-1", 6, 12),
@@ -57,7 +65,7 @@ X11_BDF_V2_INPUT_SPECS = [
     ("-Misc-Fixed-Medium-R-Normal--20-200-75-75-C-100-ISO10646-1", 10, 20),
 ]
 
-MORNING_LIGHT_BDF_V2_INPUT_SPECS = [
+MORNING_LIGHT_BDF_V3_INPUT_SPECS = [
     ("-Misc-Fixed-Medium-R-Normal--6-60-75-75-C-40-ISO10646-1", 4, 6),
     ("-Misc-Fixed-Medium-R-Normal--7-70-75-75-C-50-ISO10646-1", 5, 7),
     ("-Misc-Fixed-Medium-R-Normal--8-80-75-75-C-50-ISO10646-1", 5, 8),
@@ -71,9 +79,10 @@ MORNING_LIGHT_BDF_V2_INPUT_SPECS = [
     ("-Misc-Fixed-Medium-R-Normal--15-140-75-75-C-90-ISO10646-1", 9, 15),
     ("-Misc-Fixed-Medium-R-Normal--18-120-100-100-C-90-ISO10646-1", 9, 18),
     ("-Misc-Fixed-Medium-R-Normal--20-200-75-75-C-100-ISO10646-1", 10, 20),
-    ("-Misc-Fixed-Medium-R-Normal--16-150-75-75-C-80-ISO10646-1", 8, 16),  # resized
-    ("-Misc-Fixed-Medium-R-Normal--16-150-75-75-C-90-ISO10646-1", 9, 16),  # resized
-    ("-Misc-Fixed-Medium-R-Normal--18-170-75-75-C-100-ISO10646-1", 10, 18),  # resized
+    ("-Misc-Fixed-Medium-R-Normal--16-150-75-75-C-80-ISO10646-1", 8, 16),  # edited
+    ("-Misc-Fixed-Medium-R-Normal--16-150-75-75-C-90-ISO10646-1", 9, 16),  # edited
+    ("-Misc-Fixed-Medium-R-Normal--18-170-75-75-C-100-ISO10646-1", 10, 18),  # edited
+    ("-ML-Fixed-Medium-R-Normal--16-150-75-75-C-80-ISO10646-1", 8, 16),  # edited
 ]
 
 
@@ -339,12 +348,14 @@ class FontMaskTokenizer:
 
 
 def _get_input_spec(data_type: str):
-    if data_type == "shinonome_bdf":
+    if data_type == "test":
+        return TEST_INPUT_SPECS
+    elif data_type == "shinonome_bdf":
         return SHINONOME_BDF_V2_INPUT_SPECS
     elif data_type == "x11_bdf":
         return X11_BDF_V2_INPUT_SPECS
     elif data_type == "morning_light_bdf":
-        return MORNING_LIGHT_BDF_V2_INPUT_SPECS
+        return MORNING_LIGHT_BDF_V3_INPUT_SPECS
     else:
         raise ValueError(f"Unknown data_type: {data_type}")
 
@@ -366,6 +377,7 @@ class FontMaskDataModule(L.LightningDataModule):
         src_drop_prob: float = 0.2,
         tgt_random_prob: float = 0.25,
         split_train_test: bool = True,
+        num_workers: int = 1,
     ) -> None:
         super().__init__()
         self.save_hyperparameters()
@@ -385,6 +397,7 @@ class FontMaskDataModule(L.LightningDataModule):
         self.src_drop_prob = src_drop_prob
         self.tgt_random_prob = tgt_random_prob
         self.split_train_test = split_train_test
+        self.num_workers = num_workers
         self.input_specs = _get_input_spec(data_type)
         self.max_width = max(bbw for _, bbw, _ in self.input_specs)
         self.max_height = max(bbh for _, _, bbh in self.input_specs)
@@ -410,7 +423,17 @@ class FontMaskDataModule(L.LightningDataModule):
         pass  # self._create_dataset()
 
     def _create_dataset(self):
-        if self.data_type == "shinonome_bdf":
+        if self.data_type == "test":
+            dataset = LocalBDFFontDataset(
+                os.path.join(self.data_root, "local"),
+                subsets={
+                    "8x16.bdf",
+                    "9x16.bdf",
+                    "10x18.bdf",
+                    "ml8x16.bdf",
+                },
+            )
+        elif self.data_type == "shinonome_bdf":
             dataset = ShinonomeBDFFontDataset(
                 self.data_root,
                 download=self.download,
@@ -437,6 +460,7 @@ class FontMaskDataModule(L.LightningDataModule):
                             "8x16.bdf",
                             "9x16.bdf",
                             "10x18.bdf",
+                            "ml8x16.bdf",
                         },
                     ),
                     X11BDFFontDataset(
@@ -646,7 +670,7 @@ class FontMaskDataModule(L.LightningDataModule):
             batch_size=self.batch_size,
             shuffle=True,
             collate_fn=self._collate_fn,
-            num_workers=3,
+            num_workers=self.num_workers,
         )
 
     def val_dataloader(self):
@@ -655,7 +679,7 @@ class FontMaskDataModule(L.LightningDataModule):
             batch_size=self.batch_size,
             shuffle=False,
             collate_fn=self._collate_fn,
-            num_workers=3,
+            num_workers=self.num_workers,
         )
 
     def predict_dataloader(self):
@@ -664,7 +688,7 @@ class FontMaskDataModule(L.LightningDataModule):
             batch_size=self.batch_size,
             shuffle=False,
             collate_fn=self._collate_fn,
-            num_workers=3,
+            num_workers=self.num_workers,
         )
 
 
@@ -1073,16 +1097,14 @@ class FontMaskModel(L.LightningModule):
         return grid
 
 
+class FontMaskLightningCLI(LightningCLI):
+    def add_arguments_to_parser(self, parser):
+        parser.link_arguments("data.data_type", "model.data_type")
+        parser.link_arguments("data.kernel", "model.kernel")
+
+
 def cli_main():
-    from lightning.pytorch.cli import LightningCLI
-
     logging.basicConfig(level=logging.INFO)
-
-    class FontMaskLightningCLI(LightningCLI):
-        def add_arguments_to_parser(self, parser):
-            parser.link_arguments("data.data_type", "model.data_type")
-            parser.link_arguments("data.kernel", "model.kernel")
-
     cli = FontMaskLightningCLI(  # noqa: F841
         FontMaskModel,
         FontMaskDataModule,

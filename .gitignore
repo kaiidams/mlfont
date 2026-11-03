@@ -209,7 +209,6 @@ __marimo__/
 # Local
 /lightning_logs
 *.ckpt
-/data/local
 /data/ShinonomeBDFFontDataset
 /data/X11BDFFontDataset
 /tmp/

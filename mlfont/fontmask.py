@@ -939,6 +939,7 @@ class FontMaskModel(L.LightningModule):
             device=tgt_token.device,
         )
 
+    @torch.compile
     @torch.no_grad()
     def denoise_step(
         self,
@@ -1114,8 +1115,7 @@ def cli_main():
 def cli_predict(
     *,
     batch_size: int = 128,
-    data_type: str = "morning_light_bdf",
-    ckpt_path: str = "",
+    ckpt_path: str,
     output: str = "",
     timestep_skip: int = 1,
     predict_target: str = "",
@@ -1125,7 +1125,7 @@ def cli_predict(
 
     if not predict_target:
         predict_target = (
-            "-Shinonome-Gothic-Medium-R-Normal--16-150-75-75-C-80-ISO10646-1"
+            "-ML-Fixed-Medium-R-Normal--16-150-75-75-C-80-ISO10646-1"
         )
 
     data = FontMaskDataModule.load_from_checkpoint(
@@ -1143,8 +1143,6 @@ def cli_predict(
     if use_gpu:
         model.cuda()
 
-    model_predict_step = torch.compile(torch.no_grad(model.predict_step))
-
     with torch.no_grad():
         with open(output, "w") as fp:
             for batch_idx, batch in tqdm(enumerate(data.predict_dataloader())):
@@ -1153,7 +1151,7 @@ def cli_predict(
                         k: v.cuda() if isinstance(v, torch.Tensor) else v
                         for k, v in batch.items()
                     }
-                outputs = model_predict_step(batch, batch_idx)
+                outputs = model.predict_step(batch, batch_idx)
                 charsets = outputs["charset"]
                 encodings = outputs["encoding"]
                 image = outputs["image"]

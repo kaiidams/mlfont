@@ -46,7 +46,7 @@ python -m mlfont.cli display \
 
 ```sh
 python -m mlfont.cli export \
-    --input=./tmp/output-6x9.txt \
-    --base=./tmp/6x9.bdf \
-    --output ./tmp/ml6x9.bdf
+    --input=./tmp/output-ml8x16.txt \
+    --base=./data/local/ml8x16.bdf \
+    --output ./tmp/ml8x16.bdf
 ```

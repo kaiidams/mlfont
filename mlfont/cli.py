@@ -1,8 +1,12 @@
+import logging
 import re
 import numpy as np
 from jsonargparse import auto_cli
 
 from . import bdffont
+
+logger = logging.getLogger(__name__)
+logging.basicConfig(level=logging.INFO)
 
 
 class Main:
@@ -193,7 +197,51 @@ class Main:
                     ufont.chars.append(ch)
             bdffont.save(ufont, os.path.join(output, file.replace("a.bdf", "u.bdf")))
 
-    def makeresized(
+    def makeshnmku(
+        self,
+        *,
+        input: str = "data/ShinonomeBDFFontDataset/raw/shinonome-0.9.11/bdf/",
+        output: str = "data/local",
+    ) -> None:
+        r"""Make Unicode Shinonome kanji fonts."""
+
+        from functools import cache
+        from . import bdffont
+        import os
+
+        files = [
+            "shnmk12.bdf",
+            "shnmk14.bdf",
+            "shnmk16.bdf",
+        ]
+        names = [
+            "-Shinonome-Gothic-Medium-R-Normal--12-110-75-75-C-120-ISO10646-1",
+            "-Shinonome-Gothic-Medium-R-Normal--14-130-75-75-C-140-ISO10646-1",
+            "-Shinonome-Gothic-Medium-R-Normal--16-150-75-75-C-160-ISO10646-1",
+        ]
+
+        @cache
+        def jis_to_unicode(encoding: int) -> int:
+            byte1 = ((encoding >> 8) & 0xFF) | 0x80
+            byte2 = (encoding & 0xFF) | 0x80
+            bytes_seq = bytes([byte1, byte2])
+            char = bytes_seq.decode("euc_jp")
+            code_point = ord(char)
+            assert 0x80 <= code_point < 0x10000, "U+%04X" % code_point
+            return code_point
+
+        for file, name in zip(files, names):
+            ufont = bdffont.load(os.path.join(input, file))
+            ufont.font = name
+            ufont.properties["charset_registry"] = "ISO10646"
+            ufont.properties["charset_encoding"] = "1"
+            for ch in ufont.chars:
+                cp = ch.encoding
+                ch.encoding = jis_to_unicode(cp)
+                ch.name = "%04x" % ch.encoding
+            bdffont.save(ufont, os.path.join(output, file.replace(".bdf", "u.bdf")))
+
+    def make_resized_v1(
         self,
         *,
         input: str = "data/X11BDFFontDataset/raw/font-misc-misc-1.1.2",
@@ -255,49 +303,127 @@ class Main:
                 ch.bbx = (width, height, 0, -2)
             bdffont.save(font, os.path.join(output, dst_file))
 
-    def makeshnmku(
+    def make_resized(
         self,
         *,
-        input: str = "data/ShinonomeBDFFontDataset/raw/shinonome-0.9.11/bdf/",
+        input: str = "data/X11BDFFontDataset/raw/font-misc-misc-1.1.2",
         output: str = "data/local",
     ) -> None:
-        r"""Make Unicode Shinonome kanji fonts."""
+        r"""Make resized BDF fonts."""
 
-        from functools import cache
         from . import bdffont
         import os
 
-        files = [
-            "shnmk12.bdf",
-            "shnmk14.bdf",
-            "shnmk16.bdf",
-        ]
-        names = [
-            "-Shinonome-Gothic-Medium-R-Normal--12-110-75-75-C-120-ISO10646-1",
-            "-Shinonome-Gothic-Medium-R-Normal--14-130-75-75-C-140-ISO10646-1",
-            "-Shinonome-Gothic-Medium-R-Normal--16-150-75-75-C-160-ISO10646-1",
+        # (
+        #     src_file,
+        #     dst_file,
+        #     styles,
+        #     name,
+        #     (width, height, x-height, cap-height, descender, ascender),
+        #     src_lines1,
+        #     src_lines2,
+        # )
+        FONT_INFO = [
+            (
+                "6x13.bdf",
+                "ml6x12.bdf",
+                "RBO",
+                "-ML-Fixed-Medium-R-Normal--12-110-75-75-C-60-ISO10646-1",
+                (6, 12, 6, 9, 2, 10),
+                [0, 1, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
+                [0, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
+            ),
+            (
+                "7x14.bdf",
+                "ml7x14.bdf",
+                "B",
+                "-ML-Fixed-Medium-R-Normal--14-130-75-75-C-70-ISO10646-1",
+                (7, 14, 7, 10, 2, 12),
+                list(range(14)),
+                list(range(14)),
+            ),
+            (
+                "8x13.bdf",
+                "ml8x16.bdf",
+                "BO",
+                "-ML-Fixed-Medium-R-Normal--16-150-75-75-C-80-ISO10646-1",
+                (8, 16, 8, 11, 3, 13),
+                np.linspace(0.95, 12.75, 16, dtype=np.float64).astype(np.int32),
+                None,
+            ),
+            (
+                "9x18.bdf",
+                "ml9x18.bdf",
+                "B",
+                "-ML-Fixed-Medium-R-Normal--18-170-75-75-C-90-ISO10646-1",
+                (9, 18, 8, 12, 4, 14),
+                [0, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 11, 12, 13, 14, 15, 16, 17],
+                [0, 1, 3, 4, 5, 6, 7, 8, 9, 10, 11, 11, 12, 13, 14, 15, 16, 17],
+            ),
+            (
+                "10x20.bdf",
+                "ml10x20.bdf",
+                "",
+                "-ML-Fixed-Medium-R-Normal--20-190-75-75-C-100-ISO10646-1",
+                (10, 20, 9, 13, 4, 16),
+                [0, 1, 2, 3, 4, 5, 7, 8, 9, 10, 11, 12, 12, 13, 14, 15, 16, 17, 18, 19],
+                [0, 1, 2, 3, 4, 6, 7, 8, 9, 10, 11, 12, 12, 13, 14, 15, 16, 17, 18, 19],
+            ),
         ]
 
-        @cache
-        def jis_to_unicode(encoding: int) -> int:
-            byte1 = ((encoding >> 8) & 0xFF) | 0x80
-            byte2 = (encoding & 0xFF) | 0x80
-            bytes_seq = bytes([byte1, byte2])
-            char = bytes_seq.decode("euc_jp")
-            code_point = ord(char)
-            assert 0x80 <= code_point < 0x10000, "U+%04X" % code_point
-            return code_point
+        for info in FONT_INFO:
+            for style in "RBO":
+                src_file, dst_file, styles, name, metrics, src_lines1, src_lines2 = info
+                width, height, xh, cap_height, desc, asc = metrics
+                if style != "R":
+                    src_file = src_file.replace(".", style + ".")
+                    dst_file = dst_file.replace(".", style + ".")
+                    if style == "B":
+                        name = name.replace("-Medium-", "-Bold-")
+                    elif style == "O":
+                        name = name.replace("-R-", "-O-")
+                    if style not in styles:
+                        continue
 
-        for file, name in zip(files, names):
-            ufont = bdffont.load(os.path.join(input, file))
-            ufont.font = name
-            ufont.properties["charset_registry"] = "ISO10646"
-            ufont.properties["charset_encoding"] = "1"
-            for ch in ufont.chars:
-                cp = ch.encoding
-                ch.encoding = jis_to_unicode(cp)
-                ch.name = "%04x" % ch.encoding
-            bdffont.save(ufont, os.path.join(output, file.replace(".bdf", "u.bdf")))
+                logger.info("Generating %s from %s...", dst_file, src_file)
+                assert height == desc + asc
+                font = bdffont.load(os.path.join(input, src_file))
+                font.font = name
+                font.fontboundingbox = (width, height, 0, -desc)
+                font.size = (width, height, 75)
+                font.comment = f"Generated by mlfont (https://github.com/kaiidams/mlfont) from '{src_file}'."
+                font.properties["foundry"] = "ML"
+                if style == "B":
+                    font.properties["weight_name"] = "Bold"
+                elif style == "O":
+                    font.properties["slant"] = "O"
+
+                font.properties["setwidth_name"] = xh
+                if "_gbdfed_info" in font.properties:
+                    del font.properties["_gbdfed_info"]
+                if "_xmbdfed_info" in font.properties:
+                    del font.properties["_xmbdfed_info"]
+                font.properties["x_height"] = xh
+                font.properties["cap_height"] = cap_height
+                font.properties["font_descent"] = desc
+                font.properties["font_ascent"] = asc
+                for ch in font.chars:
+                    x = font.numpy(ch)
+                    if src_lines2:
+                        x = x[src_lines1, :] + x[src_lines2, :]
+                    else:
+                        x = x[src_lines1, :]
+                    x = np.pad(x, ((0, 0), (0, 7 - (width + 7) % 8)), mode="constant", constant_values=0)
+                    x = np.clip(x, 0, 1)
+                    assert x.shape[0] == height, f"{ch.name} {x.shape}"
+                    mask = 1 << (7 - np.arange(8))
+                    x = np.sum(x.reshape(-1, 8) * mask[None, :], axis=-1).astype(np.uint8)
+                    assert not ch.name.startswith("gen:")
+                    if ch.encoding >= 0x100:
+                        ch.name = "gen:" + ch.name
+                    ch.bitmap = x.tobytes()
+                    ch.bbx = (width, height, 0, -2)
+                bdffont.save(font, os.path.join(output, dst_file))
 
 
 if __name__ == "__main__":

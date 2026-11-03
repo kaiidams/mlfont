@@ -381,7 +381,7 @@ def _dump_property_value(v: str | int | tuple[int, ...] | None) -> str:
         return str(v)
     if isinstance(v, str):
         return '"' + v + '"'
-    assert False
+    raise ValueError(f"Unsupported property value: {v!r} (type {type(v).__name__})")
 
 
 class BDFFontWriter:

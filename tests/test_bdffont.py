@@ -8,7 +8,7 @@ import unittest
 from mlfont import bdffont
 
 SAMPLE_PATH = os.path.join(
-    os.path.dirname(__file__), "..", "data", "local", "shnm6x12u.bdf"
+    os.path.dirname(__file__), "nil2.bdf"
 )
 
 
@@ -24,11 +24,11 @@ class TestBDFFontLoadSave(unittest.TestCase):
         self.assertIsInstance(font, bdffont.BDFFont)
         self.assertEqual(font.version, "2.1")
         self.assertEqual(
-            font.font, "-Shinonome-Gothic-Medium-R-Normal--12-110-75-75-C-60-ISO10646-1"
+            font.font, "-misc-nil-medium-r-normal--2-20-75-75-c-10-misc-fontspecific"
         )
-        self.assertEqual(font.size, (12, 75, 75))
-        self.assertEqual(font.fontboundingbox, (6, 12, 0, -2))
-        self.assertEqual(len(font.chars), 320)
+        self.assertEqual(font.size, (2, 75, 75))
+        self.assertEqual(font.fontboundingbox, (1, 2, 0, 0))
+        self.assertEqual(len(font.chars), 224)
 
     def test_save(self):
         font = bdffont.load(SAMPLE_PATH)

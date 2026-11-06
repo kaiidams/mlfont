@@ -74,14 +74,14 @@ MORNING_LIGHT_BDF_V3_INPUT_SPECS = [
     ("-Misc-Fixed-Medium-R-SemiCondensed--12-110-75-75-C-60-ISO10646-1", 6, 12),
     ("-Misc-Fixed-Medium-R-SemiCondensed--13-120-75-75-C-60-ISO10646-1", 6, 13),
     ("-Misc-Fixed-Medium-R-Normal--13-120-75-75-C-70-ISO10646-1", 7, 13),
-    ("-Misc-Fixed-Medium-R-Normal--14-130-75-75-C-70-ISO10646-1", 7, 14),
+    ("-ML-Fixed-Medium-R-Normal--14-130-75-75-C-70-ISO10646-1", 7, 14),  # edited
     ("-Misc-Fixed-Medium-R-Normal--13-120-75-75-C-80-ISO10646-1", 8, 13),
     ("-Misc-Fixed-Medium-R-Normal--15-140-75-75-C-90-ISO10646-1", 9, 15),
     ("-Misc-Fixed-Medium-R-Normal--18-120-100-100-C-90-ISO10646-1", 9, 18),
     ("-Misc-Fixed-Medium-R-Normal--20-200-75-75-C-100-ISO10646-1", 10, 20),
-    ("-Misc-Fixed-Medium-R-Normal--16-150-75-75-C-80-ISO10646-1", 8, 16),  # edited
-    ("-Misc-Fixed-Medium-R-Normal--16-150-75-75-C-90-ISO10646-1", 9, 16),  # edited
-    ("-Misc-Fixed-Medium-R-Normal--18-170-75-75-C-100-ISO10646-1", 10, 18),  # edited
+    ("-ML-Fixed-Medium-R-Normal--12-110-75-75-C-60-ISO10646-1", 6, 12),  # edited
+    ("-ML-Fixed-Medium-R-Normal--18-170-75-75-C-90-ISO10646-1", 9, 18),  # edited
+    ("-ML-Fixed-Medium-R-Normal--20-190-75-75-C-100-ISO10646-1", 10, 20),  # edited
     ("-ML-Fixed-Medium-R-Normal--16-150-75-75-C-80-ISO10646-1", 8, 16),  # edited
 ]
 

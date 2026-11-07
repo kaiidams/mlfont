@@ -457,10 +457,11 @@ class FontMaskDataModule(L.LightningDataModule):
                     LocalBDFFontDataset(
                         os.path.join(self.data_root, "local"),
                         subsets={
-                            "8x16.bdf",
-                            "9x16.bdf",
-                            "10x18.bdf",
+                            "ml6x12.bdf",
+                            "ml7x14.bdf",
                             "ml8x16.bdf",
+                            "ml9x18.bdf",
+                            "ml10x20.bdf",
                         },
                     ),
                     X11BDFFontDataset(

@@ -26,16 +26,22 @@ class Main:
         import torch
         from .fontmask import FontMaskDataModule, FontMaskModel
 
-        m = re.match(r"(\d+)x(\d+)", predict_target)
+        m = re.match(r"ml(\d+)x(\d+)", predict_target)
         if m:
             from .fontmask import _get_input_spec
 
+            logger.info("Looking for %s", predict_target)
             predict_bbw = int(m.group(1))
             predict_bbh = int(m.group(2))
+            predict_target = ""
             for prop_id, bbw, bbh in _get_input_spec(data_type=data_type):
-                if bbw == predict_bbw and bbh == predict_bbh:
+                if bbw == predict_bbw and bbh == predict_bbh and "-ML-" in prop_id:
                     predict_target = prop_id
+                    assert predict_target
+                    logger.info("Found %s", predict_target)
                     break
+            if not predict_target:
+                raise ValueError("Could not find target for %s", predict_target)
 
         data = FontMaskDataModule.load_from_checkpoint(
             ckpt_path,
@@ -73,6 +79,7 @@ class Main:
                         )
                         bbh, bbw = image[sample_idx].shape
                         fp.write(f"{charset}\t{encoding}\t{bbw}\t{bbh}\t{image_hex}\n")
+                    fp.flush()
 
     def display(
         self,

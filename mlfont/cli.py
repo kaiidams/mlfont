@@ -57,7 +57,6 @@ class Main:
         if use_gpu:
             model.cuda()
         model.eval()
-        model_predict_step = torch.compile(torch.no_grad(model.predict_step))
 
         with torch.no_grad():
             with open(output, "w") as fp:
@@ -67,7 +66,7 @@ class Main:
                             k: v.cuda() if isinstance(v, torch.Tensor) else v
                             for k, v in batch.items()
                         }
-                    outputs = model_predict_step(batch, batch_idx)
+                    outputs = model.predict_step(batch, batch_idx)
                     charsets = outputs["charset"]
                     encodings = outputs["encoding"]
                     image = outputs["image"]

@@ -134,7 +134,7 @@ class Main:
                 x = np.packbits(image, axis=1)
                 bitmap = x.tobytes()
                 char = bdffont.BDFChar(
-                    f"gen{encoding:04X}",
+                    f"gen:{encoding:04X}",
                     encoding=encoding,
                     bbx=(bbw, bbh, dispx, dispy),
                     swidth=(bbw * 72000 // (75 * bbh), 0),
@@ -339,8 +339,8 @@ class Main:
                 "B",
                 "-ML-Fixed-Medium-R-Normal--14-130-75-75-C-70-ISO10646-1",
                 (7, 14, 7, 10, 2, 12),
-                list(range(14)),
-                list(range(14)),
+                None,
+                None,
             ),
             (
                 "8x13.bdf",
@@ -407,22 +407,23 @@ class Main:
                 font.properties["cap_height"] = cap_height
                 font.properties["font_descent"] = desc
                 font.properties["font_ascent"] = asc
-                for ch in font.chars:
-                    x = font.numpy(ch)
-                    if src_lines2:
-                        x = x[src_lines1, :] + x[src_lines2, :]
-                    else:
-                        x = x[src_lines1, :]
-                    x = np.pad(x, ((0, 0), (0, 7 - (width + 7) % 8)), mode="constant", constant_values=0)
-                    x = np.clip(x, 0, 1)
-                    assert x.shape[0] == height, f"{ch.name} {x.shape}"
-                    mask = 1 << (7 - np.arange(8))
-                    x = np.sum(x.reshape(-1, 8) * mask[None, :], axis=-1).astype(np.uint8)
-                    assert not ch.name.startswith("gen:")
-                    if ch.encoding >= 0x100:
-                        ch.name = "gen:" + ch.name
-                    ch.bitmap = x.tobytes()
-                    ch.bbx = (width, height, 0, -desc)
+                if src_lines1 is not None:
+                    for ch in font.chars:
+                        x = font.numpy(ch)
+                        if src_lines2 is not None:
+                            x = x[src_lines1, :] + x[src_lines2, :]
+                        else:
+                            x = x[src_lines1, :]
+                        x = np.pad(x, ((0, 0), (0, 7 - (width + 7) % 8)), mode="constant", constant_values=0)
+                        x = np.clip(x, 0, 1)
+                        assert x.shape[0] == height, f"{ch.name} {x.shape}"
+                        mask = 1 << (7 - np.arange(8))
+                        x = np.sum(x.reshape(-1, 8) * mask[None, :], axis=-1).astype(np.uint8)
+                        assert not ch.name.startswith("gen:")
+                        if ch.encoding >= 0x100:
+                            ch.name = "gen:" + ch.name
+                        ch.bitmap = x.tobytes()
+                        ch.bbx = (width, height, 0, -desc)
                 bdffont.save(font, os.path.join(output, dst_file))
 
 

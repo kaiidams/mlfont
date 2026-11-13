@@ -2,14 +2,23 @@
 
 ## Generate resized BDF fonts
 
-These fonts fill the gap between font sizes.
-Generates `8x16.bdf`, `9x16.bdf` and `10x18.bdf`.
+Vertically resamples and adjusts metrics of X11 misc BDF fonts
+to generate 11 Morning Light (ml*) BDF files.
 
 ```sh
-python -m mlfont.cli makeresized
+python -m mlfont.cli make_resized
 ```
 
+## Edit manually BDF fonts
+
+Edit generated BDF files. In my experiment, I edited only
+characters included in ISO-8859-1 of `ml6x12.bdf`, `ml8x15.bdf`, `ml9x18.bdf`
+and `ml10x20.bdf`, and removed all characters which are not included in
+ISO-8859-1. `ml7x14.bdf` was untouched.
+
 ## Training
+
+I used regular-weight X11 font-misc-misc BDF fonts and edited BDF fonts.
 
 ```sh
 data_type=morning_light_bdf
@@ -26,27 +35,59 @@ python -m mlfont.fontmask fit
 
 ## Prediction
 
+This generates text files containing predicted bitmaps for
+characters not included in the training data. The file is used to
+recreate a BDF file with edited characters.
+
 ```sh
-ckpt_path=./tmp/fontmask-20260131.ckpt
+ckpt_path=./tmp/fontmask-20261112.ckpt
 python -m mlfont.cli predict \
     --ckpt_path=$ckpt_path \
-    --output=./tmp/output-7x14.txt \
+    --output=./tmp/20261112/output-ml6x12.txt \
     --batch_size=4 \
-    --predict_target=7x14 \
+    --predict_target=ml6x12 \
 ```
 
 ### Display the result
 
+This displays predicted bitmaps in ASCII text.
+
 ```sh
 python -m mlfont.cli display \
-    --input=./tmp/output-6x9.txt \
+    --input=./tmp/20261112/output-ml6x12.txt \
+```
+
+Output:
+
+```
+Charset: ISO10646-1
+Encoding: U+0100 Char: Ā
+[][][][][]. 
+. . . . . . 
+. . []. . . 
+. []. []. . 
+[]. . . []. 
+[]. . . []. 
+[][][][][]. 
+[]. . . []. 
+[]. . . []. 
+[]. . . []. 
+. . . . . . 
+. . . . . . 
+Charset: ISO10646-1
+Encoding: U+0101 Char: ā
+. . . . . . 
+...
 ```
 
 ### Export BDF files
 
+This generates a BDF file with both the original bitmaps
+and predicted bitmaps.
+
 ```sh
 python -m mlfont.cli export \
-    --input=./tmp/output-6x9.txt \
-    --base=./tmp/6x9.bdf \
-    --output ./tmp/ml6x9.bdf
+    --input=./tmp/20261112/output-ml6x12.txt \
+    --base=./data/local/ml6x12.bdf \
+    --output ./tmp/20261112/ml6x12.bdf
 ```
